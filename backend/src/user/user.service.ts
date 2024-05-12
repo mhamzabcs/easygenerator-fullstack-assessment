@@ -9,6 +9,7 @@ import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { UserAuthResponseDto } from './dto/user-auth-response.dto';
 
 @Injectable()
 export class UserService {
@@ -17,7 +18,7 @@ export class UserService {
     private jwtService: JwtService,
   ) {}
 
-  async create(createUserDto: CreateUserDto): Promise<any> {
+  async create(createUserDto: CreateUserDto): Promise<UserAuthResponseDto> {
     const checkExistingUser = await this.findCountByEmail(createUserDto.email);
     if (checkExistingUser) {
       throw new BadRequestException('User with email already exists');
@@ -28,10 +29,12 @@ export class UserService {
       password: hashedPassword,
     });
     user = await user.save();
-    return { token: this.generateToken(user) };
+    const userAuthResponseDto = new UserAuthResponseDto();
+    userAuthResponseDto.token = this.generateToken(user);
+    return userAuthResponseDto;
   }
 
-  async login(email: string, pass: string): Promise<any> {
+  async login(email: string, pass: string): Promise<UserAuthResponseDto> {
     const user = await this.findOneByEmail(email);
     if (!user) {
       throw new UnauthorizedException();
@@ -39,7 +42,9 @@ export class UserService {
     if (!this.comparePasswords(pass, user.password)) {
       throw new UnauthorizedException();
     }
-    return { token: this.generateToken(user) };
+    const userAuthResponseDto = new UserAuthResponseDto();
+    userAuthResponseDto.token = this.generateToken(user);
+    return userAuthResponseDto;
   }
 
   async findCountByEmail(email: string): Promise<number> {
